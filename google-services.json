@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "920002934295",
+    "project_id": "comments-54327",
+    "storage_bucket": "comments-54327.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:920002934295:android:587b4a0813c58275c98e52",
+        "android_client_info": {
+          "package_name": "com.orders.commentsapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJYbLT4N2vMaxhU5nlUYuYHbLDKRcXmSo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

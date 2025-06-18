@@ -1,9 +1,9 @@
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
-import { useState, useEffect } from "react";
-import { initLocalDb } from "./db/localDb";
+import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./services/firebase";
+import Login from "./components/Login";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -13,17 +13,20 @@ export default function App() {
     });
     return () => unsubscribe();
   }, []);
-  useEffect(() => {
-    initLocalDb()
-      .then(() => console.log("SQLite ready"))
-      .catch((err) => console.log("SQLite init error", err.message));
-  }, []);
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
+  if (!user) {
+    return (
+      <>
+        <Login />
+      </>
+    );
+  } else {
+    return (
+      <View style={styles.container}>
+        <Text>{user ? `Привет, ${user.email}` : "Пожалуйста, войдите"}</Text>
+        <StatusBar style="auto" />
+      </View>
+    );
+  }
 }
 
 const styles = StyleSheet.create({

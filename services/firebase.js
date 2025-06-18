@@ -1,23 +1,27 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { initializeAuth, getReactNativePersistence } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getFirestore } from "firebase/firestore";
-import ReactNativeAsyncStorage from "@react-native-async-storage/async-storage";
-import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAvz30STku4TmOb8MBf_tc0Ouy1lbUDKRc",
-  authDomain: "comments-54327.firebaseapp.com",
-  projectId: "comments-54327",
-  storageBucket: "comments-54327.firebasestorage.app",
-  messagingSenderId: "920002934295",
-  appId: "1:920002934295:web:6bf1e84f1248ca68c98e52",
+  apiKey: "AIzaSyBGaK_8wE-J3Fl4AJKHURvEPa2q55EG12M",
+  authDomain: "commentsapp-64ffe.firebaseapp.com",
+  projectId: "commentsapp-64ffe",
+  storageBucket: "commentsapp-64ffe.firebasestorage.app",
+  messagingSenderId: "972331484966",
+  appId: "1:972331484966:web:d0e8113ea045e414b8e3e7",
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(ReactNativeAsyncStorage),
-});
-const db = getFirestore(app);
-const storage = getStorage(app);
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-export { auth, db, storage };
+let auth;
+try {
+  auth = getAuth(app);
+} catch (error) {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+}
+const db = getFirestore(app);
+
+export { app, auth, db };
