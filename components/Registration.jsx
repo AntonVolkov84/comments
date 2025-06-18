@@ -27,16 +27,13 @@ export default function Registration({ setRegistrationShow }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      console.log("createUserWithEmailAndPassword", user);
-
       if (user.uid) {
         await addToUsers(email, userName, homePage);
-        console.log("User added to Firestore");
-
         await sendEmailVerification(auth.currentUser);
         Alert.alert("Вам на почту отправлено письмо подтверждениe");
 
         await signOut(auth);
+        setRegistrationShow(false);
       }
     } catch (error) {
       console.log("handleRegister", error.message);
@@ -106,7 +103,7 @@ export default function Registration({ setRegistrationShow }) {
   };
   return (
     <View style={styles.container}>
-      <Text style={styles.registrationTitle}>Registration</Text>
+      <Text style={styles.registrationTitle}>Регистрация</Text>
       <TextInput value={email} onChangeText={setEmail} style={styles.registrationInput} placeholder="Email"></TextInput>
       <TextInput
         value={userName}
@@ -137,11 +134,11 @@ export default function Registration({ setRegistrationShow }) {
       />
       <View style={styles.registrationButtonSubmit}>
         <Button
-          title="Submit"
+          title="Зарегистрироваться"
           onPress={() => handleSubmit(email, userName, password, confirmedPassword, homePage)}
         ></Button>
       </View>
-      <Button onPress={() => setRegistrationShow(false)} title="Back to login"></Button>
+      <Button onPress={() => setRegistrationShow(false)} title="Назад"></Button>
     </View>
   );
 }

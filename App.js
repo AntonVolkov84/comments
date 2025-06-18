@@ -1,9 +1,10 @@
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View } from "react-native";
+import { Button, StyleSheet, Text, View } from "react-native";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./services/firebase";
 import Login from "./components/Login";
+import { signOut } from "firebase/auth";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -13,16 +14,18 @@ export default function App() {
     });
     return () => unsubscribe();
   }, []);
-  if (!user) {
+
+  if (!user || user?.emailVerified === false) {
     return (
       <>
-        <Login />
+        <Login onLoginSuccess={(user) => setUser(user)} />
       </>
     );
   } else {
     return (
       <View style={styles.container}>
         <Text>{user ? `Привет, ${user.email}` : "Пожалуйста, войдите"}</Text>
+        <Button onPress={async () => await signOut(auth)} title="Выйти"></Button>
         <StatusBar style="auto" />
       </View>
     );

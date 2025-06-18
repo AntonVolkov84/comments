@@ -1,9 +1,10 @@
 import { View, Text, Button, StyleSheet, TextInput, Alert } from "react-native";
 import { useState } from "react";
 import Registration from "./Registration";
-import { signInWithEmailAndPassword, logOut } from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../services/firebase";
 
-export default function Login() {
+export default function Login({ onLoginSuccess }) {
   const [registrationShow, setRegistrationShow] = useState(false);
   const [email, setEmail] = useState(null);
   const [password, setPassword] = useState(null);
@@ -16,15 +17,12 @@ export default function Login() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      await user.reload();
       if (!user.emailVerified) {
-        Alert.alert("Mail is not Verified");
-        await logOut();
+        Alert.alert("Ваша почта не подтверждена");
         return;
       }
-      const firebaseRef = doc(db, "users", email);
-      await updateDoc(firebaseRef, {
-        pushToken: expoPushToken,
-      });
+      onLoginSuccess(user);
     } catch (error) {
       console.log("error in loginUser", error.code, error.message);
       Alert.alert("Wrong email or password");
@@ -37,7 +35,7 @@ export default function Login() {
         <Registration setRegistrationShow={setRegistrationShow} />
       ) : (
         <View>
-          <Text style={styles.loginTitle}>Login</Text>
+          <Text style={styles.loginTitle}>Вход</Text>
           <TextInput value={email} onChangeText={setEmail} style={styles.loginInput} placeholder="Email"></TextInput>
           <TextInput
             secureTextEntry
@@ -47,7 +45,7 @@ export default function Login() {
             placeholder="Password"
           ></TextInput>
           <View style={styles.loginButtonSubmit}>
-            <Button title="Submit" onPress={() => handleSubmit(email, password)}></Button>
+            <Button title="Войти" onPress={() => handleSubmit(email, password)}></Button>
           </View>
           <Button onPress={() => setRegistrationShow(true)} title="Registration"></Button>
         </View>
