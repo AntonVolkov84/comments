@@ -9,7 +9,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 
-export default function Profile() {
+export default function Profile({ toggleTheme, theme }) {
   const [data, setData] = useState(null);
   const [dataLoaded, setDataLoaded] = useState(false);
   const { t } = useTranslation();
@@ -129,17 +129,22 @@ export default function Profile() {
   return (
     <View style={styles.profileContainer}>
       <View style={styles.profileName}>
-        <Text style={styles.profileText}>{t("profile.nikname")}</Text>
-        <Text style={styles.profileText}>{dataLoaded ? data.userName : "Loading..."}</Text>
+        <Text style={[styles.profileText, theme === "dark" && styles.profileTextDark]}>{t("profile.nikname")}</Text>
+        <Text style={[styles.profileText, theme === "dark" && styles.profileTextDark]}>
+          {dataLoaded ? data.userName : `${t("loading")}`}
+        </Text>
       </View>
-      <TouchableOpacity onPress={toggleLanguage} style={styles.profileLanguage}>
+      <TouchableOpacity onPress={() => toggleLanguage()} style={styles.profileLanguage}>
         <Text style={{ fontSize: 18 }}>{t("profile.switchLanguage")}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => toggleTheme()} style={styles.profileLanguage}>
+        <Text style={{ fontSize: 18 }}>{t("profile.switchTheme")}</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => pickImage()} style={styles.profileAvatar}>
         {dataLoaded && data.uri ? (
           <Image source={{ uri: data.uri }} style={styles.profileImage}></Image>
         ) : (
-          <Text style={styles.profileImageText}>Нажмите тут, чтобы выбрать аватар</Text>
+          <Text style={styles.profileImageText}>{t("profile.avatarinfo")}</Text>
         )}
       </TouchableOpacity>
       <Button title={t("profile.logout")} onPress={() => signOut(auth)}></Button>
@@ -154,7 +159,7 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     alignItems: "center",
     gap: 20,
-    marginTop: 70,
+    marginTop: 80,
   },
   profileName: {
     width: "100%",
@@ -169,7 +174,7 @@ const styles = StyleSheet.create({
     backgroundColor: "grey",
   },
   profileLanguage: {
-    marginVertical: 20,
+    marginVertical: 10,
     padding: 10,
     backgroundColor: "#ddd",
     borderRadius: 10,
@@ -177,6 +182,9 @@ const styles = StyleSheet.create({
   profileText: {
     textAlign: "center",
     fontSize: 25,
+  },
+  profileTextDark: {
+    color: "#fff",
   },
   profileImageText: {
     textAlign: "center",

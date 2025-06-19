@@ -29,6 +29,12 @@
     "plugins": [
       "expo-sqlite",
       [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Разрешить приложению Comments-App использовать местоположение"
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Приложение получает доступ к вашим фото, чтобы вы могли делиться ими с другими."

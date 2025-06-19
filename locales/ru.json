@@ -1,7 +1,9 @@
 {
+  "loading": "Загрузка...",
   "profile": {
     "title": "Профиль",
     "nikname": "Никнейм",
+    "avatarinfo": "Нажмите тут, чтобы выбрать аватар",
     "switchTheme": "Переключить тему",
     "switchLanguage": "Переключить язык",
     "location": "Геолокация",

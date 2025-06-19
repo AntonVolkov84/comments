@@ -1,7 +1,9 @@
 {
+  "loading": "Loading...",
   "profile": {
     "title": "Profile",
     "nikname": "Nik",
+    "avatarinfo": "Click here to choose an avatar",
     "switchTheme": "Switch Theme",
     "switchLanguage": "Switch Language",
     "location": "Location",
