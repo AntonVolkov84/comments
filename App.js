@@ -2,12 +2,15 @@ import { StyleSheet, Text, View, Button } from "react-native";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./services/firebase";
+import "./i18n";
 import Login from "./components/Login";
 import Profile from "./components/Profile";
+import { useTranslation } from "react-i18next";
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [profileVisibility, setProfileVisibility] = useState(false);
+  const { t } = useTranslation();
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -25,7 +28,7 @@ export default function App() {
     return (
       <View style={styles.container}>
         <View style={styles.profileBtn}>
-          <Button title="Профиль" onPress={() => setProfileVisibility(!profileVisibility)}></Button>
+          <Button title={t("profile.title")} onPress={() => setProfileVisibility(!profileVisibility)}></Button>
         </View>
         {profileVisibility && <Profile />}
       </View>

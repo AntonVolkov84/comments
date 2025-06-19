@@ -1,0 +1,10 @@
+{
+  "profile": {
+    "title": "Профиль",
+    "nikname": "Никнейм",
+    "switchTheme": "Переключить тему",
+    "switchLanguage": "Переключить язык",
+    "location": "Геолокация",
+    "logout": "Выйти"
+  }
+}

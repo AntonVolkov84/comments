@@ -1,0 +1,10 @@
+{
+  "profile": {
+    "title": "Profile",
+    "nikname": "Nik",
+    "switchTheme": "Switch Theme",
+    "switchLanguage": "Switch Language",
+    "location": "Location",
+    "logout": "Logout"
+  }
+}

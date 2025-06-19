@@ -6,15 +6,23 @@ import { getDoc, doc, updateDoc } from "firebase/firestore";
 import * as ImagePicker from "expo-image-picker";
 import * as Crypto from "expo-crypto";
 import * as ImageManipulator from "expo-image-manipulator";
+import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 
 export default function Profile() {
   const [data, setData] = useState(null);
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [image, setImage] = useState(null);
+  const { t } = useTranslation();
   const userEmail = auth.currentUser.email;
+
   useEffect(() => {
     getDataUser();
   }, []);
+
+  const toggleLanguage = () => {
+    const newLang = i18n.language === "ru" ? "en" : "ru";
+    i18n.changeLanguage(newLang);
+  };
 
   const getDataUser = async () => {
     try {
@@ -121,9 +129,12 @@ export default function Profile() {
   return (
     <View style={styles.profileContainer}>
       <View style={styles.profileName}>
-        <Text style={styles.profileText}>Никнейм:</Text>
+        <Text style={styles.profileText}>{t("profile.nikname")}</Text>
         <Text style={styles.profileText}>{dataLoaded ? data.userName : "Loading..."}</Text>
       </View>
+      <TouchableOpacity onPress={toggleLanguage} style={styles.profileLanguage}>
+        <Text style={{ fontSize: 18 }}>{t("profile.switchLanguage")}</Text>
+      </TouchableOpacity>
       <TouchableOpacity onPress={() => pickImage()} style={styles.profileAvatar}>
         {dataLoaded && data.uri ? (
           <Image source={{ uri: data.uri }} style={styles.profileImage}></Image>
@@ -131,7 +142,7 @@ export default function Profile() {
           <Text style={styles.profileImageText}>Нажмите тут, чтобы выбрать аватар</Text>
         )}
       </TouchableOpacity>
-      <Button title="Выйти" onPress={() => signOut(auth)}></Button>
+      <Button title={t("profile.logout")} onPress={() => signOut(auth)}></Button>
     </View>
   );
 }
@@ -147,7 +158,7 @@ const styles = StyleSheet.create({
   },
   profileName: {
     width: "100%",
-    height: 100,
+    height: 50,
   },
   profileAvatar: {
     height: 300,
@@ -156,6 +167,12 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     justifyContent: "center",
     backgroundColor: "grey",
+  },
+  profileLanguage: {
+    marginVertical: 20,
+    padding: 10,
+    backgroundColor: "#ddd",
+    borderRadius: 10,
   },
   profileText: {
     textAlign: "center",
