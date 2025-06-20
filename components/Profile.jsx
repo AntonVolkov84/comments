@@ -17,6 +17,10 @@ export default function Profile({ toggleTheme, theme }) {
 
   useEffect(() => {
     getDataUser();
+    return () => {
+      setData(null);
+      setDataLoaded(false);
+    };
   }, []);
 
   const toggleLanguage = () => {
@@ -80,21 +84,13 @@ export default function Profile({ toggleTheme, theme }) {
 
   const deleteFileFromStorage = async (publicId) => {
     try {
-      const timestamp = Math.floor(Date.now() / 1000);
-      const stringToSign = `public_id=${publicId}&timestamp=${timestamp}${process.env.EXPO_PUBLIC_APPLICATION_KEY_SECRET}`;
-      const signature = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA1, stringToSign);
-
-      const response = await fetch("https://api.cloudinary.com/v1_1/dmmixwibz/image/destroy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          public_id: publicId,
-          api_key: process.env.EXPO_PUBLIC_APPLICATION_KEY_ID,
-          timestamp,
-          signature,
-        }),
+      await fetch("https://comments-server-production.up.railway.app/delete-image", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ publicId }),
       });
-      const result = await response.json();
     } catch (error) {
       console.log("deleteFileFromStorage error:", error.message);
     }
