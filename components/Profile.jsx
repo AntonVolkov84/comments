@@ -74,6 +74,7 @@ export default function Profile({ toggleTheme, theme }) {
         const uploadResult = await uploadImageToCloudinary(resizedImage.uri);
         if (uploadResult) {
           await updateUser(uploadResult.url, uploadResult.publicId);
+          await updateUserSql(userEmail, uploadResult.url);
           getDataUser();
         }
       }
@@ -82,6 +83,23 @@ export default function Profile({ toggleTheme, theme }) {
     }
   };
 
+  const updateUserSql = async (email, avatar_url) => {
+    const data = {
+      email,
+      avatar_url,
+    };
+    try {
+      await fetch("https://comments-server-production.up.railway.app/users/avatar", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+    } catch (error) {
+      console.log("deleteFileFromStorage error:", error.message);
+    }
+  };
   const deleteFileFromStorage = async (publicId) => {
     try {
       await fetch("https://comments-server-production.up.railway.app/delete-image", {

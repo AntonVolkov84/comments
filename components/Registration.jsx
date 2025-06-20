@@ -23,12 +23,33 @@ export default function Registration({ setRegistrationShow }) {
       console.log("add to users", error.message);
     }
   };
+  const addToUserSql = async (email, userName, homePage) => {
+    try {
+      const emailInLowerCase = email.toLowerCase();
+      const user = {
+        email: emailInLowerCase,
+        username: userName,
+        ...(homePage && { homepage: homePage }),
+      };
+      await fetch("https://comments-server-production.up.railway.app/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(user),
+      });
+    } catch (error) {
+      console.log("deleteFileFromStorage error:", error.message);
+    }
+  };
   const handleRegister = async (email, userName, password, homePage) => {
+    console.log(homePage);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       if (user.uid) {
         await addToUsers(email, userName, homePage);
+        await addToUserSql(email, userName, homePage);
         await sendEmailVerification(auth.currentUser);
         Alert.alert("Вам на почту отправлено письмо подтверждениe");
 
@@ -97,7 +118,7 @@ export default function Registration({ setRegistrationShow }) {
     if (!checkPasswordConfirm(password, confirmedPassword)) {
       return Alert.alert("Ваши пароли не совпадают");
     } else {
-      handleRegister(email, userName, password, confirmedPassword, homePage);
+      handleRegister(email, userName, password, homePage);
       handleClearForm();
     }
   };
