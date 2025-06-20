@@ -1,5 +1,6 @@
 {
   "loading": "Loading...",
+  "cancel": "Cancel",
   "profile": {
     "title": "Profile",
     "nikname": "Nik",
@@ -8,5 +9,16 @@
     "switchLanguage": "Switch Language",
     "location": "Location",
     "logout": "Logout"
+  },
+  "adminline": {
+    "email": "Email",
+    "username": "Username",
+    "date": "Date",
+    "post": "+ Post"
+  },
+  "postmodal": {
+    "title": "New post",
+    "textplaceholder": "Type your text",
+    "post": "Publish"
   }
 }

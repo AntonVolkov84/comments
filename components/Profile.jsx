@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     alignItems: "center",
     gap: 20,
-    marginTop: 80,
+    marginTop: 10,
   },
   profileName: {
     width: "100%",

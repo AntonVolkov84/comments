@@ -1,5 +1,6 @@
 {
   "loading": "Загрузка...",
+  "cancel": "Отмена",
   "profile": {
     "title": "Профиль",
     "nikname": "Никнейм",
@@ -8,5 +9,16 @@
     "switchLanguage": "Переключить язык",
     "location": "Геолокация",
     "logout": "Выйти"
+  },
+  "adminline": {
+    "email": "Эмаил",
+    "username": "Никнейм",
+    "date": "Дата",
+    "post": "+ Пост"
+  },
+  "postmodal": {
+    "title": "Новый пост",
+    "textplaceholder": "Введите текст",
+    "post": "Опубликовать"
   }
 }
