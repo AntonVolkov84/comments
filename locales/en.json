@@ -20,5 +20,9 @@
     "title": "New post",
     "textplaceholder": "Type your text",
     "post": "Publish"
+  },
+  "app": {
+    "alertcaptcha": "Captcha failed, are you a robot?",
+    "alertnotext": "No text to post"
   }
 }

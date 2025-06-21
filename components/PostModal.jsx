@@ -12,22 +12,18 @@ import {
 } from "react-native";
 import { useTranslation } from "react-i18next";
 
-export default function PostModal({ visible, onClose, onSubmit, postText, setPostText }) {
+export default function PostModal({ isModalVisible, postText, setPostText, setModalVisible, onSubmit }) {
   const { t } = useTranslation();
   const [showCaptcha, setShowCaptcha] = useState(false);
-
-  const handlePostPress = () => {
-    if (!postText.trim()) return;
-    setShowCaptcha(true);
-  };
-  const handleCaptchaVerified = (token) => {
-    setShowCaptcha(false);
-    console.log("token", token);
+  const handleCaptchaVerified = (event) => {
+    const token = event.nativeEvent.data;
     onSubmit(token);
+    setShowCaptcha(false);
+    setModalVisible(false);
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={isModalVisible} transparent animationType="slide">
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>{t("postmodal.title")}</Text>
@@ -39,16 +35,27 @@ export default function PostModal({ visible, onClose, onSubmit, postText, setPos
             onChangeText={setPostText}
           />
           <View style={styles.modalButtons}>
-            <TouchableOpacity onPress={() => handlePostPress()} style={styles.modalButton}>
+            <TouchableOpacity onPress={() => setShowCaptcha(true)} style={styles.modalButton}>
               <Text style={styles.modalButtonText}>{t("postmodal.post")}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={onClose} style={[styles.modalButton, { backgroundColor: "gray" }]}>
+            <TouchableOpacity
+              onPress={() => {
+                setShowCaptcha(true);
+                setModalVisible(false);
+                setPostText("");
+              }}
+              style={[styles.modalButton, { backgroundColor: "gray" }]}
+            >
               <Text style={styles.modalButtonText}>{t("cancel")}</Text>
             </TouchableOpacity>
           </View>
         </View>
-        {showCaptcha && <Captcha action="create_post" onVerify={handleCaptchaVerified} />}
       </KeyboardAvoidingView>
+      {showCaptcha && (
+        <View style={{ position: "absolute", height: 0, width: 0, overflow: "hidden" }}>
+          <Captcha action="create_post" onVerify={handleCaptchaVerified} />
+        </View>
+      )}
     </Modal>
   );
 }

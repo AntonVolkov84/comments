@@ -1,14 +1,4 @@
-import {
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  Button,
-  KeyboardAvoidingView,
-  Platform,
-  Modal,
-} from "react-native";
+import { StyleSheet, Alert, View, Button } from "react-native";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./services/firebase";
@@ -20,21 +10,65 @@ import * as Location from "expo-location";
 import { StatusBar } from "expo-status-bar";
 import AdminLine from "./components/AdminLine";
 import PostModal from "./components/PostModal";
+import axios from "axios";
+import PostsList from "./components/PostList";
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [userSqlId, setUserSqlId] = useState(null);
   const [profileVisibility, setProfileVisibility] = useState(false);
   const [location, setLocation] = useState(null);
   const [isModalVisible, setModalVisible] = useState(false);
-  const [postText, setPostText] = useState("");
   const [theme, setTheme] = useState("light");
+  const [postText, setPostText] = useState("");
+  const [posts, setPosts] = useState([]);
+  const [ws, setWs] = useState(null);
   const { t } = useTranslation();
+  console.log(posts);
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      const currentUserEmail = currentUser.email;
+      getUserSqlId(currentUserEmail);
     });
+    getPosts();
     return () => unsubscribe();
   }, []);
+  const getPosts = async () => {
+    try {
+      const postsData = await axios.get("https://comments-server-production.up.railway.app/posts");
+      setPosts(postsData.data);
+    } catch (error) {
+      console.log("getPosts", error.message);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    const socket = new WebSocket("wss://comments-server-production.up.railway.app");
+    socket.onopen = () => {
+      console.log("WebSocket connected");
+    };
+    socket.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === "new_post") {
+          const newPost = message.data;
+          setPosts((prevPosts) => [newPost, ...prevPosts]);
+        }
+      } catch (err) {
+        console.log("WS message parse error", err);
+      }
+    };
+    socket.onclose = () => {
+      console.log("WebSocket disconnected");
+    };
+    setWs(socket);
+    return () => {
+      socket.close();
+    };
+  }, [user]);
+
   useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
@@ -71,12 +105,41 @@ export default function App() {
     setModalVisible(true);
   };
 
-  const handleCreatePost = (token) => {
-    console.log("Captcha token:", token);
-    if (!postText.trim()) return;
-    setPostText("");
-    setModalVisible(false);
+  const handlePostSubmit = async (token) => {
+    if (!token) {
+      return Alert.alert(`${t("app.alertcaptcha")}`);
+    }
+    if (!postText) {
+      return Alert.alert(`${t("app.alertnotext")}`);
+    }
+    try {
+      const response = await axios.post("https://comments-server-production.up.railway.app/post/createpost", {
+        user_id: userSqlId,
+        text: postText,
+      });
+      console.log("Post created:", response.data);
+      return response.data;
+    } catch (error) {
+      console.log("handlePostSubmit", error.message);
+    }
   };
+  const getUserSqlId = async (email) => {
+    try {
+      const response = await fetch("https://comments-server-production.up.railway.app/user/by-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      setUserSqlId(data.id);
+      setPostText("");
+    } catch (error) {
+      console.log("getUserSqlId", error.message);
+    }
+  };
+  const onLike = async () => {};
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
   };
@@ -102,11 +165,11 @@ export default function App() {
     return (
       <View style={[styles.container, theme === "dark" ? styles.dark : styles.light]}>
         <PostModal
-          visible={isModalVisible}
-          onClose={() => setModalVisible(false)}
-          onSubmit={handleCreatePost}
           postText={postText}
           setPostText={setPostText}
+          isModalVisible={isModalVisible}
+          setModalVisible={setModalVisible}
+          onSubmit={handlePostSubmit}
         />
         <View style={styles.profileBtn}>
           <Button title={t("profile.title")} onPress={() => setProfileVisibility(!profileVisibility)}></Button>
@@ -114,6 +177,9 @@ export default function App() {
         {profileVisibility && <Profile toggleTheme={toggleTheme} theme={theme} />}
         <View style={styles.adminLine}>
           <AdminLine theme={theme} onSort={onSort} onCreatePost={handleOpenPostModal} />
+        </View>
+        <View style={styles.postblock}>
+          <PostsList posts={posts} theme={theme} onLike={onLike} />
         </View>
         <StatusBar style={theme === "dark" ? "light" : "dark"} />
       </View>
@@ -191,5 +257,9 @@ const styles = StyleSheet.create({
   modalButtonText: {
     color: "#fff",
     fontWeight: "bold",
+  },
+  postblock: {
+    width: "100%",
+    height: 550,
   },
 });
