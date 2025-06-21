@@ -1,5 +1,5 @@
 import { StyleSheet, Alert, View, Button } from "react-native";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./services/firebase";
 import "./i18n";
@@ -22,9 +22,11 @@ export default function App() {
   const [theme, setTheme] = useState("light");
   const [postText, setPostText] = useState("");
   const [posts, setPosts] = useState([]);
+  const [sortType, setSortType] = useState("created_at");
+  const [sortOrder, setSortOrder] = useState("desc");
   const [ws, setWs] = useState(null);
   const { t } = useTranslation();
-  console.log(posts);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -34,6 +36,20 @@ export default function App() {
     getPosts();
     return () => unsubscribe();
   }, []);
+  const toggleSortOrder = () => {
+    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+  };
+  const sortedPosts = React.useMemo(() => {
+    return [...posts].sort((a, b) => {
+      let comp = 0;
+      if (sortType === "created_at") {
+        comp = new Date(a.created_at) - new Date(b.created_at);
+      } else if (sortType === "username") {
+        comp = a.username.localeCompare(b.username);
+      }
+      return sortOrder === "asc" ? comp : -comp;
+    });
+  }, [posts, sortType, sortOrder]);
   const getPosts = async () => {
     try {
       const postsData = await axios.get("https://comments-server-production.up.railway.app/posts");
@@ -139,11 +155,20 @@ export default function App() {
       console.log("getUserSqlId", error.message);
     }
   };
-  const onLike = async () => {};
+  const onLike = async () => {
+    console.log("onLike");
+  };
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
   };
-  const onSort = () => {};
+  const onSort = (type) => {
+    if (type === sortType) {
+      toggleSortOrder();
+    } else {
+      setSortType(type);
+      setSortOrder("asc");
+    }
+  };
   const fetchWeather = async (lat, lon) => {
     try {
       const response = await fetch(
@@ -179,7 +204,7 @@ export default function App() {
           <AdminLine theme={theme} onSort={onSort} onCreatePost={handleOpenPostModal} />
         </View>
         <View style={styles.postblock}>
-          <PostsList posts={posts} theme={theme} onLike={onLike} />
+          <PostsList posts={sortedPosts} theme={theme} onLike={onLike} />
         </View>
         <StatusBar style={theme === "dark" ? "light" : "dark"} />
       </View>

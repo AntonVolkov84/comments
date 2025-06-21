@@ -5,16 +5,13 @@ export default function AdminLine({ onSort, onCreatePost, theme }) {
   const { t } = useTranslation();
   return (
     <View style={[styles.container, theme === "dark" ? styles.dark : styles.light]}>
-      <TouchableOpacity onPress={() => onSort("email")} style={styles.button}>
-        <Text style={styles.buttonText}>{t("adminline.email")}</Text>
-      </TouchableOpacity>
       <TouchableOpacity onPress={() => onSort("username")} style={styles.button}>
         <Text style={styles.buttonText}>{t("adminline.username")}</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => onSort("created_at")} style={styles.button}>
         <Text style={styles.buttonText}>{t("adminline.date")}</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={onCreatePost} style={styles.button}>
+      <TouchableOpacity onPress={onCreatePost} style={styles.buttonPost}>
         <Text style={styles.buttonText}>{t("adminline.post")}</Text>
       </TouchableOpacity>
     </View>
@@ -36,6 +33,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 5,
     backgroundColor: "#1976d2",
+  },
+  buttonPost: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 5,
+    backgroundColor: "#b52a41",
   },
   buttonText: {
     color: "#fff",
