@@ -23,6 +23,7 @@
   },
   "app": {
     "alertcaptcha": "Captcha failed, are you a robot?",
-    "alertnotext": "No text to post"
+    "alertnotext": "No text to post",
+    "alertlike": "Hey! One like per person! ❤️\nWe're hiding the button - don't be naughty"
   }
 }

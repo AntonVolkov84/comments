@@ -3,10 +3,10 @@ import { useEffect, useState } from "react";
 import { auth } from "../services/firebase";
 import { AntDesign } from "@expo/vector-icons";
 
-const PostsList = ({ posts, theme, onLike }) => {
+const PostsList = ({ posts, theme, onLike, likeVisibleForPost }) => {
   const isDark = theme === "dark";
   const [userEmail, setUserEmail] = useState(null);
-
+  console.log(likeVisibleForPost);
   useEffect(() => {
     const currentUser = auth.currentUser;
     setUserEmail(currentUser?.email || null);
@@ -41,8 +41,8 @@ const PostsList = ({ posts, theme, onLike }) => {
 
             <View style={styles.likesContainer}>
               <Text style={[styles.likesCount, isDark && styles.textDark]}>{item.likescount}</Text>
-              {!isAuthor && (
-                <TouchableOpacity onPress={() => onLike(item.id)}>
+              {!isAuthor && likeVisibleForPost[item.id] !== false && (
+                <TouchableOpacity onPress={() => onLike(item)}>
                   <AntDesign name="arrowup" size={18} color={isDark ? "#fff" : "#000"} />
                 </TouchableOpacity>
               )}
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
     width: 100,
-    overflow: "hiden",
+    overflow: "hidden",
   },
   likesContainer: {
     flexDirection: "row",

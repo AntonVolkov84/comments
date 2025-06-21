@@ -24,6 +24,7 @@ export default function App() {
   const [posts, setPosts] = useState([]);
   const [sortType, setSortType] = useState("created_at");
   const [sortOrder, setSortOrder] = useState("desc");
+  const [likeVisibleForPost, setLikeVisibleForPost] = useState({});
   const [ws, setWs] = useState(null);
   const { t } = useTranslation();
 
@@ -71,6 +72,10 @@ export default function App() {
         if (message.type === "new_post") {
           const newPost = message.data;
           setPosts((prevPosts) => [newPost, ...prevPosts]);
+        }
+        if (message.type === "like_updated") {
+          const updatedPost = message.data;
+          setPosts((prevPosts) => prevPosts.map((post) => (post.id === updatedPost.id ? updatedPost : post)));
         }
       } catch (err) {
         console.log("WS message parse error", err);
@@ -155,8 +160,28 @@ export default function App() {
       console.log("getUserSqlId", error.message);
     }
   };
-  const onLike = async () => {
-    console.log("onLike");
+  const onLike = async (item) => {
+    try {
+      const response = await fetch("https://comments-server-production.up.railway.app/post/like", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: item.id, userId: userSqlId }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        if (err?.error === "User has already liked this post") {
+          Alert.alert(`${t("app.alertlike")}`);
+          setLikeVisibleForPost((prev) => ({
+            ...prev,
+            [item.id]: false,
+          }));
+        } else {
+          console.warn("Like failed", err);
+        }
+      }
+    } catch (error) {
+      console.error("onLike error:", error.message);
+    }
   };
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
@@ -204,7 +229,7 @@ export default function App() {
           <AdminLine theme={theme} onSort={onSort} onCreatePost={handleOpenPostModal} />
         </View>
         <View style={styles.postblock}>
-          <PostsList posts={sortedPosts} theme={theme} onLike={onLike} />
+          <PostsList posts={sortedPosts} theme={theme} onLike={onLike} likeVisibleForPost={likeVisibleForPost} />
         </View>
         <StatusBar style={theme === "dark" ? "light" : "dark"} />
       </View>
