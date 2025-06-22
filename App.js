@@ -139,7 +139,6 @@ export default function App() {
     }
     const resultValidatePost = validateHtmlText(postText);
     if (!resultValidatePost.valid) {
-      console.log("resultValidatePost", resultValidatePost);
       return Alert.alert(`Validation failed: , ${resultValidatePost.error}`);
     }
     try {
@@ -203,7 +202,23 @@ export default function App() {
       setSortOrder("asc");
     }
   };
-  const onCreateComment = async () => {};
+  const onCreateComment = async (comment, postId, file_uri, photo_uri) => {
+    const resultValidateComments = validateHtmlText(comment);
+    if (!resultValidateComments.valid) {
+      return Alert.alert(`Validation failed: , ${resultValidateComments.error}`);
+    }
+    try {
+      await axios.post("https://comments-server-production.up.railway.app/comments/create", {
+        text: comment,
+        post_id: postId,
+        author_id: userSqlId,
+        file_uri: file_uri || null,
+        photo_uri: photo_uri || null,
+      });
+    } catch (error) {
+      console.log("onCreateComment", error.message);
+    }
+  };
   const addComment = (item) => {
     setViewComments(item);
     setCommentsVisible(true);

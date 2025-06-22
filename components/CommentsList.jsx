@@ -1,7 +1,20 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, Modal } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TextInput,
+  TouchableOpacity,
+  Keyboard,
+  Linking,
+  Image,
+  Modal,
+} from "react-native";
 import { AntDesign } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import CommentItem from "./CommentItem";
+import axios from "axios";
 
 export default function CommentsList({
   viewComments,
@@ -16,6 +29,7 @@ export default function CommentsList({
   const [modalVisible, setModalVisible] = useState(false);
   const [text, setText] = useState("");
   const [showPreview, setShowPreview] = useState(false);
+  const [commentsData, setCommentsData] = useState([]);
   const isDark = theme === "dark";
   const item = viewComments;
   const isAuthor = item.email === userEmail;
@@ -24,6 +38,39 @@ export default function CommentsList({
   useEffect(() => {
     getUser(userEmail);
   }, []);
+  const getComments = async (id) => {
+    try {
+      const res = await axios.post("https://comments-server-production.up.railway.app/commeby-postnts/create", {
+        post_id: id,
+      });
+      setCommentsData(res.data);
+    } catch (error) {
+      console.log("getComments", error.message);
+    }
+  };
+  useEffect(() => {
+    if (!item?.id) return;
+    getComments(item.id);
+    const socket = new WebSocket("wss://comments-server-production.up.railway.app");
+    socket.onopen = () => {
+      socket.send(JSON.stringify({ type: "subscribe_comments", post_id: item.id }));
+    };
+    socket.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === "new_comment" && message.data.post_id === item.id) {
+          const comment = message.data;
+          setCommentsData((prev) => [...(prev || []), comment]);
+        }
+      } catch (err) {
+        console.log("WS comment parse error", err);
+      }
+    };
+    socket.onclose = () => {};
+    return () => {
+      socket.close();
+    };
+  }, [item?.id]);
 
   const getUser = async (email) => {
     try {
@@ -40,31 +87,70 @@ export default function CommentsList({
       "getUser", error.message;
     }
   };
-
+  console.log(commentsData);
   return (
     <View style={[styles.container, isDark ? styles.dark : styles.light]}>
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={[styles.modalOverlay]}>
           <View style={[styles.modalContent, isDark ? styles.modalDark : styles.modalLight]}>
-            <TextInput
-              value={text}
-              onChangeText={setText}
-              placeholder={t("commentslist.placeholder")}
-              placeholderTextColor={isDark ? "#aaa" : "#666"}
-              style={[styles.input, isDark ? styles.inputDark : styles.inputLight]}
-              multiline
-            />
-            <TouchableOpacity onPress={() => setShowPreview(!showPreview)} style={styles.previewButton}>
+            {!showPreview && (
+              <TextInput
+                value={text}
+                onChangeText={setText}
+                placeholder={t("commentslist.placeholder")}
+                placeholderTextColor={isDark ? "#aaa" : "#666"}
+                style={[styles.input, isDark ? styles.inputDark : styles.inputLight]}
+                multiline
+              />
+            )}
+            <TouchableOpacity
+              onPress={() => {
+                Keyboard.dismiss();
+                setShowPreview(!showPreview);
+              }}
+              style={styles.previewButton}
+            >
               <Text style={styles.previewButtonText}>
                 {showPreview ? t("commentslist.hidepreview") : t("commentslist.preview")}
               </Text>
             </TouchableOpacity>
-            {showPreview && (
+            {showPreview && userData && (
               <View style={[styles.previewBox, isDark ? styles.previewDark : styles.previewLight]}>
-                <Text style={[styles.previewText, isDark ? styles.textDark : styles.textLight]}>{text}</Text>
+                <View style={[styles.postContainer, isDark && styles.postContainerDark]}>
+                  <View style={styles.leftColumn}>
+                    <Image source={{ uri: userData.avatar_url }} style={styles.avatar} />
+                    <Text style={[styles.username, isDark && styles.textDark]}>{userData.username}</Text>
+                  </View>
+
+                  <View style={styles.rightColumnPreview}>
+                    <View style={styles.postHeader}>
+                      <View style={styles.homepageContainer}>
+                        {userData.homepage ? (
+                          <Text style={[styles.homepage, isDark && styles.textDark]} numberOfLines={1}>
+                            {userData.homepage}
+                          </Text>
+                        ) : (
+                          <View style={{ flex: 1 }} />
+                        )}
+                      </View>
+                    </View>
+                    <Text
+                      style={[styles.postText, isDark ? styles.textDark : styles.textLight, styles.previewTextLimited]}
+                    >
+                      {text}
+                    </Text>
+                  </View>
+                </View>
               </View>
             )}
-            <TouchableOpacity onPress={() => onCreateComment()} style={styles.submitButton}>
+            <TouchableOpacity
+              onPress={() => {
+                onCreateComment(text, item.id);
+                setText("");
+                setModalVisible(false);
+              }}
+              style={styles.submitButton}
+            >
               <Text style={styles.submitButtonText}>{t("send")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -119,18 +205,21 @@ export default function CommentsList({
               )}
             </View>
           </View>
-          <Text style={[styles.postText, isDark && styles.textDark]}>{item.text}</Text>
+          <Text style={[styles.postText, isDark ? styles.textDark : styles.textLight]}>{item.text}</Text>
         </View>
       </View>
+      <FlatList
+        data={commentsData}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item, index }) => <CommentItem theme={theme} comment={item} level={index} />}
+        contentContainerStyle={{ paddingBottom: 20 }}
+        style={{ flex: 1 }}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  list: {
-    paddingBottom: 100,
-    paddingHorizontal: 10,
-  },
   postContainer: {
     flexDirection: "row",
     backgroundColor: "#f2f2f2",
@@ -160,6 +249,9 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   rightColumn: {
+    flex: 1,
+  },
+  rightColumnPreview: {
     flex: 1,
   },
   postHeader: {
@@ -293,25 +385,20 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   previewBox: {
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  previewLight: {
-    backgroundColor: "#f2f2f2",
+    marginTop: 10,
+    borderRadius: 10,
+    padding: 10,
   },
   previewDark: {
-    backgroundColor: "#444",
+    backgroundColor: "#333",
+  },
+  previewLight: {
+    backgroundColor: "#eee",
   },
   previewText: {
     fontSize: 15,
   },
-  textDark: {
-    color: "#fff",
-  },
-  textLight: {
-    color: "#000",
-  },
+
   submitButton: {
     backgroundColor: "#1976d2",
     paddingVertical: 10,
@@ -330,5 +417,9 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: "#b52a41",
     fontWeight: "bold",
+  },
+  previewTextLimited: {
+    maxHeight: 200,
+    overflow: "hidden",
   },
 });

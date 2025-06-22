@@ -40,7 +40,7 @@ const PostsList = ({ posts, theme, onLike, likeVisibleForPost, addComment }) => 
               </View>
 
               <View style={styles.likesContainer}>
-                <Text style={[styles.likesCount, isDark && styles.textDark]}>{item.likescount}</Text>
+                <Text style={[styles.likesCount]}>{item.likescount}</Text>
                 {!isAuthor && likeVisibleForPost[item.id] !== false && (
                   <TouchableOpacity onPressIn={(e) => e.stopPropagation()} onPress={() => onLike(item)}>
                     <AntDesign name="arrowup" size={18} color={isDark ? "#fff" : "#000"} />
@@ -123,6 +123,8 @@ const styles = StyleSheet.create({
   likesCount: {
     fontSize: 14,
     marginRight: 2,
+    color: "#b52a41",
+    fontWeight: "bold",
   },
   postText: {
     fontSize: 15,
@@ -130,6 +132,7 @@ const styles = StyleSheet.create({
   },
   textDark: {
     color: "#fff",
+    fontWeight: "bold",
   },
   homepageContainer: {
     flexDirection: "row",
