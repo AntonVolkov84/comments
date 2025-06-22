@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { auth } from "../services/firebase";
 import { AntDesign } from "@expo/vector-icons";
 
-const PostsList = ({ posts, theme, onLike, likeVisibleForPost }) => {
+const PostsList = ({ posts, theme, onLike, likeVisibleForPost, addComment }) => {
   const isDark = theme === "dark";
   const [userEmail, setUserEmail] = useState(null);
   useEffect(() => {
@@ -15,41 +15,43 @@ const PostsList = ({ posts, theme, onLike, likeVisibleForPost }) => {
     const isAuthor = item.email === userEmail;
 
     return (
-      <View style={[styles.postContainer, isDark && styles.postContainerDark]}>
-        <View style={styles.leftColumn}>
-          <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
-          <Text style={[styles.username, isDark && styles.textDark]}>{item.username}</Text>
-        </View>
-        <View style={styles.rightColumn}>
-          <View style={styles.postHeader}>
-            <View style={styles.homepageContainer}>
-              {item.homepage ? (
-                <TouchableOpacity onPress={() => Linking.openURL(item.homepage)}>
-                  <Text style={[styles.homepage, isDark && styles.textDark]} numberOfLines={1}>
-                    {item.homepage}
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <View style={{ flex: 1 }} />
-              )}
-              <Text style={[styles.dateText, isDark && styles.textDark]}>
-                {new Date(item.created_at).toLocaleDateString()}{" "}
-                {new Date(item.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-              </Text>
-            </View>
-
-            <View style={styles.likesContainer}>
-              <Text style={[styles.likesCount, isDark && styles.textDark]}>{item.likescount}</Text>
-              {!isAuthor && likeVisibleForPost[item.id] !== false && (
-                <TouchableOpacity onPress={() => onLike(item)}>
-                  <AntDesign name="arrowup" size={18} color={isDark ? "#fff" : "#000"} />
-                </TouchableOpacity>
-              )}
-            </View>
+      <TouchableOpacity activeOpacity={0.9} onPress={() => addComment(item)}>
+        <View style={[styles.postContainer, isDark && styles.postContainerDark]}>
+          <View style={styles.leftColumn}>
+            <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
+            <Text style={[styles.username, isDark && styles.textDark]}>{item.username}</Text>
           </View>
-          <Text style={[styles.postText, isDark && styles.textDark]}>{item.text}</Text>
+          <View style={styles.rightColumn}>
+            <View style={styles.postHeader}>
+              <View style={styles.homepageContainer}>
+                {item.homepage ? (
+                  <TouchableOpacity onPress={() => Linking.openURL(item.homepage)}>
+                    <Text style={[styles.homepage, isDark && styles.textDark]} numberOfLines={1}>
+                      {item.homepage}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={{ flex: 1 }} />
+                )}
+                <Text style={[styles.dateText, isDark && styles.textDark]}>
+                  {new Date(item.created_at).toLocaleDateString()}{" "}
+                  {new Date(item.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </Text>
+              </View>
+
+              <View style={styles.likesContainer}>
+                <Text style={[styles.likesCount, isDark && styles.textDark]}>{item.likescount}</Text>
+                {!isAuthor && likeVisibleForPost[item.id] !== false && (
+                  <TouchableOpacity onPressIn={(e) => e.stopPropagation()} onPress={() => onLike(item)}>
+                    <AntDesign name="arrowup" size={18} color={isDark ? "#fff" : "#000"} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+            <Text style={[styles.postText, isDark && styles.textDark]}>{item.text}</Text>
+          </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 

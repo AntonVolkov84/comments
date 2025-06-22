@@ -1,9 +1,10 @@
-import { StyleSheet, Alert, View, Button } from "react-native";
+import { StyleSheet, Alert, View, Button, experimental_LayoutConformance } from "react-native";
 import React, { useEffect, useState, useMemo } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./services/firebase";
 import "./i18n";
 import Login from "./components/Login";
+import CommentsList from "./components/CommentsList";
 import Profile from "./components/Profile";
 import { useTranslation } from "react-i18next";
 import * as Location from "expo-location";
@@ -26,6 +27,8 @@ export default function App() {
   const [sortType, setSortType] = useState("created_at");
   const [sortOrder, setSortOrder] = useState("desc");
   const [likeVisibleForPost, setLikeVisibleForPost] = useState({});
+  const [viewComments, setViewComments] = useState({});
+  const [commentsVisible, setCommentsVisible] = useState(false);
   const [ws, setWs] = useState(null);
   const { t } = useTranslation();
 
@@ -200,6 +203,11 @@ export default function App() {
       setSortOrder("asc");
     }
   };
+  const onCreateComment = async () => {};
+  const addComment = (item) => {
+    setViewComments(item);
+    setCommentsVisible(true);
+  };
   const fetchWeather = async (lat, lon) => {
     try {
       const response = await fetch(
@@ -231,11 +239,32 @@ export default function App() {
           <Button title={t("profile.title")} onPress={() => setProfileVisibility(!profileVisibility)}></Button>
         </View>
         {profileVisibility && <Profile toggleTheme={toggleTheme} theme={theme} />}
-        <View style={styles.adminLine}>
-          <AdminLine theme={theme} onSort={onSort} onCreatePost={handleOpenPostModal} />
-        </View>
+        {!commentsVisible && (
+          <View style={styles.adminLine}>
+            <AdminLine theme={theme} onSort={onSort} onCreatePost={handleOpenPostModal} />
+          </View>
+        )}
+
         <View style={styles.postblock}>
-          <PostsList posts={sortedPosts} theme={theme} onLike={onLike} likeVisibleForPost={likeVisibleForPost} />
+          {commentsVisible ? (
+            <CommentsList
+              onCreateComment={onCreateComment}
+              viewComments={viewComments}
+              setCommentsVisible={setCommentsVisible}
+              theme={theme}
+              onLike={onLike}
+              likeVisibleForPost={likeVisibleForPost}
+              userEmail={user.email}
+            />
+          ) : (
+            <PostsList
+              posts={sortedPosts}
+              addComment={addComment}
+              theme={theme}
+              onLike={onLike}
+              likeVisibleForPost={likeVisibleForPost}
+            />
+          )}
         </View>
         <StatusBar style={theme === "dark" ? "light" : "dark"} />
       </View>
@@ -316,6 +345,6 @@ const styles = StyleSheet.create({
   },
   postblock: {
     width: "100%",
-    height: 550,
+    height: "100%",
   },
 });

@@ -1,6 +1,11 @@
 {
   "loading": "Loading...",
   "cancel": "Cancel",
+  "back": "Back",
+  "comment": "Comment",
+  "comments": "Comments",
+  "send": "Send",
+  "close": "Close",
   "profile": {
     "title": "Profile",
     "nikname": "Nik",
@@ -25,5 +30,10 @@
     "alertcaptcha": "Captcha failed, are you a robot?",
     "alertnotext": "No text to post",
     "alertlike": "Hey! One like per person! ❤️\nWe're hiding the button - don't be naughty"
+  },
+  "commentslist": {
+    "placeholder": "Type your comment",
+    "hidepreview": "Hide preview",
+    "preview": "Preview"
   }
 }
