@@ -14,7 +14,7 @@ export default function CommentItem({ comment, level, theme }) {
   const isDark = theme === "dark";
 
   return (
-    <View style={[styles.postContainer, isDark && styles.postContainerDark, { marginLeft: 5 + level * 5 }]}>
+    <View style={[styles.postContainer, isDark && styles.postContainerDark, { marginLeft: 10 + level * 5 }]}>
       <View style={styles.leftColumn}>
         <Image source={{ uri: comment.avatar_url }} style={styles.avatar} />
         <Text style={[styles.username, isDark && styles.textDark]}>{comment.username}</Text>

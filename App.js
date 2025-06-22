@@ -67,9 +67,7 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     const socket = new WebSocket("wss://comments-server-production.up.railway.app");
-    socket.onopen = () => {
-      console.log("WebSocket connected");
-    };
+    socket.onopen = () => {};
     socket.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
@@ -85,9 +83,7 @@ export default function App() {
         console.log("WS message parse error", err);
       }
     };
-    socket.onclose = () => {
-      console.log("WebSocket disconnected");
-    };
+    socket.onclose = () => {};
     setWs(socket);
     return () => {
       socket.close();

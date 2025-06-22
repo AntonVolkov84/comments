@@ -9,12 +9,14 @@ import {
   Linking,
   Image,
   Modal,
+  Alert,
 } from "react-native";
 import { AntDesign } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import CommentItem from "./CommentItem";
 import axios from "axios";
+import Captcha from "./Captcha";
 
 export default function CommentsList({
   viewComments,
@@ -29,6 +31,7 @@ export default function CommentsList({
   const [modalVisible, setModalVisible] = useState(false);
   const [text, setText] = useState("");
   const [showPreview, setShowPreview] = useState(false);
+  const [showCaptcha, setShowCaptcha] = useState(false);
   const [commentsData, setCommentsData] = useState([]);
   const isDark = theme === "dark";
   const item = viewComments;
@@ -46,6 +49,17 @@ export default function CommentsList({
       setCommentsData(res.data);
     } catch (error) {
       console.log("getComments", error.message);
+    }
+  };
+  const checkCaptcha = (event) => {
+    const token = event.nativeEvent.data;
+    if (!token) {
+      return Alert.alert(`${t("app.alertcaptcha")}`);
+    } else {
+      setModalVisible(false);
+      onCreateComment(text, item.id);
+      setText("");
+      setShowCaptcha(false);
     }
   };
   useEffect(() => {
@@ -87,7 +101,7 @@ export default function CommentsList({
       "getUser", error.message;
     }
   };
-  console.log(commentsData);
+
   return (
     <View style={[styles.container, isDark ? styles.dark : styles.light]}>
       <Modal visible={modalVisible} animationType="slide" transparent>
@@ -145,9 +159,7 @@ export default function CommentsList({
             )}
             <TouchableOpacity
               onPress={() => {
-                onCreateComment(text, item.id);
-                setText("");
-                setModalVisible(false);
+                setShowCaptcha(true);
               }}
               style={styles.submitButton}
             >
@@ -164,6 +176,11 @@ export default function CommentsList({
             </TouchableOpacity>
           </View>
         </View>
+        {showCaptcha && (
+          <View style={{ position: "absolute", height: 0, width: 0, overflow: "hidden" }}>
+            <Captcha action="create_post" onVerify={checkCaptcha} />
+          </View>
+        )}
       </Modal>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => setCommentsVisible(false)} style={styles.button}>
