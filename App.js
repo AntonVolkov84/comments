@@ -12,6 +12,7 @@ import AdminLine from "./components/AdminLine";
 import PostModal from "./components/PostModal";
 import axios from "axios";
 import PostsList from "./components/PostList";
+import { validateHtmlText } from "./validate";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -132,6 +133,11 @@ export default function App() {
     }
     if (!postText) {
       return Alert.alert(`${t("app.alertnotext")}`);
+    }
+    const resultValidatePost = validateHtmlText(postText);
+    if (!resultValidatePost.valid) {
+      console.log("resultValidatePost", resultValidatePost);
+      return Alert.alert(`Validation failed: , ${resultValidatePost.error}`);
     }
     try {
       const response = await axios.post("https://comments-server-production.up.railway.app/post/createpost", {

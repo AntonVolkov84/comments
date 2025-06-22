@@ -6,7 +6,6 @@ import { AntDesign } from "@expo/vector-icons";
 const PostsList = ({ posts, theme, onLike, likeVisibleForPost }) => {
   const isDark = theme === "dark";
   const [userEmail, setUserEmail] = useState(null);
-  console.log(likeVisibleForPost);
   useEffect(() => {
     const currentUser = auth.currentUser;
     setUserEmail(currentUser?.email || null);
