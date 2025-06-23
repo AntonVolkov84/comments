@@ -24,6 +24,8 @@ import {
   syncCommentToDb,
   likePostOffline,
   createPostOffline,
+  syncPendingDataToServer,
+  resetLocalDb,
 } from "./db/localDb";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -94,6 +96,7 @@ export default function App() {
         return;
       }
       try {
+        await syncPendingDataToServer();
         const usersRes = await fetch("https://comments-server-production.up.railway.app/users/getallUsers");
         const users = await usersRes.json();
         for (const user of users) await addUser(user);
@@ -125,7 +128,7 @@ export default function App() {
         setUser(currentUser);
         await AsyncStorage.setItem("cachedUser", JSON.stringify(currentUser));
         const currentUserEmail = currentUser.email;
-        if (!isOnline) {
+        if (isOnline) {
           getUserSqlId(currentUserEmail);
         }
       } else {
@@ -136,6 +139,7 @@ export default function App() {
 
     return () => unsubscribe();
   }, []);
+
   const toggleSortOrder = () => {
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
   };
@@ -219,6 +223,7 @@ export default function App() {
       setPosts((prevPosts) => [newPost, ...prevPosts]);
     }
   };
+
   const handlePostSubmit = async (token) => {
     if (!token) {
       return Alert.alert(`${t("app.alertcaptcha")}`);
@@ -306,14 +311,15 @@ export default function App() {
       setSortOrder("asc");
     }
   };
-  const onCreateComment = async (comment, postId, file_uri, photo_uri) => {
+  const onCreateComment = async (comment, postId, photo_uri, file_uri) => {
     const resultValidateComments = validateHtmlText(comment);
     if (!resultValidateComments.valid) {
       return Alert.alert(`Validation failed: , ${resultValidateComments.error}`);
     }
+
     try {
       await axios.post("https://comments-server-production.up.railway.app/comments/create", {
-        text: comment,
+        text: !comment && photo_uri ? "Photo:" : comment,
         post_id: postId,
         author_id: userSqlId,
         file_uri: file_uri || null,

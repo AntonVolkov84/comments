@@ -18,6 +18,9 @@ import CommentItem from "./CommentItem";
 import axios from "axios";
 import Captcha from "./Captcha";
 import { getCommentsByPostIdOffline, addCommentOffline } from "../db/localDb";
+import { Feather } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 
 export default function CommentsList({
   viewComments,
@@ -35,18 +38,83 @@ export default function CommentsList({
   const [text, setText] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [showCaptcha, setShowCaptcha] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState(null);
   const [commentsData, setCommentsData] = useState([]);
   const isDark = theme === "dark";
   const item = viewComments;
   const isAuthor = item.email === userEmail;
   const { t } = useTranslation();
-
+  console.log(commentsData);
   useEffect(() => {
     if (!isOnline) {
       return;
     }
     getUser(userEmail);
   }, []);
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+      if (!result.canceled) {
+        const originalUri = result.assets[0].uri;
+        const fileInfo = await fetch(originalUri);
+        const blob = await fileInfo.blob();
+        const maxFileSize = 2 * 1024 * 1024;
+        if (blob.size > maxFileSize) {
+          alert("Файл слишком большой. Максимальный размер — 2 МБ.");
+          return;
+        }
+        const resizedImage = await ImageManipulator.manipulateAsync(
+          originalUri,
+          [{ resize: { width: 300, height: 300 } }],
+          { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+        );
+
+        const uploadResult = await uploadImageToCloudinary(resizedImage.uri);
+        if (uploadResult) {
+          return uploadResult.url;
+        }
+      }
+    } catch (error) {
+      console.log("pickImage", error.message);
+    }
+  };
+  const handlePickImage = async () => {
+    const imageUrl = await pickImage();
+    if (imageUrl) {
+      setPhotoUrl(imageUrl);
+    }
+  };
+  const uploadImageToCloudinary = async (imageUri) => {
+    const data = new FormData();
+    data.append("file", {
+      uri: imageUri,
+      type: "image/jpeg",
+      name: "upload.jpg",
+    });
+    data.append("upload_preset", "mobile_unsigned");
+
+    try {
+      const response = await fetch("https://api.cloudinary.com/v1_1/dmmixwibz/upload", {
+        method: "POST",
+        body: data,
+      });
+      const result = await response.json();
+      if (response.ok) {
+        return { url: result.secure_url, publicId: result.public_id };
+      } else {
+        console.error("Cloudinary upload error:", result);
+        return null;
+      }
+    } catch (error) {
+      console.error("Upload failed:", error);
+      return null;
+    }
+  };
   const getComments = async (id) => {
     try {
       const res = await axios.post("https://comments-server-production.up.railway.app/commeby-postnts/create", {
@@ -70,9 +138,10 @@ export default function CommentsList({
       return Alert.alert(`${t("app.alertcaptcha")}`);
     } else {
       setModalVisible(false);
-      onCreateComment(text, item.id);
+      onCreateComment(text, item.id, photoUrl);
       setText("");
       setShowCaptcha(false);
+      setPhotoUrl(null);
     }
   };
   useEffect(() => {
@@ -144,17 +213,30 @@ export default function CommentsList({
                 multiline
               />
             )}
-            <TouchableOpacity
-              onPress={() => {
-                Keyboard.dismiss();
-                setShowPreview(!showPreview);
-              }}
-              style={styles.previewButton}
-            >
-              <Text style={styles.previewButtonText}>
-                {showPreview ? t("commentslist.hidepreview") : t("commentslist.preview")}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.previewRow}>
+              <TouchableOpacity
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setShowPreview(!showPreview);
+                }}
+                style={styles.previewButton}
+              >
+                <Text style={styles.previewButtonText}>
+                  {showPreview ? t("commentslist.hidepreview") : t("commentslist.preview")}
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.previewIcons}>
+                <TouchableOpacity onPress={() => handlePickImage()} style={styles.iconButton}>
+                  <AntDesign name="picture" size={20} color={isDark ? "#fff" : "#000"} />
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={() => console.log("File upload pressed")} style={styles.iconButton}>
+                  <Feather name="paperclip" size={20} color={isDark ? "#fff" : "#000"} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
             {showPreview && userData && (
               <View style={[styles.previewBox, isDark ? styles.previewDark : styles.previewLight]}>
                 <View style={[styles.postContainer, isDark && styles.postContainerDark]}>
@@ -180,6 +262,7 @@ export default function CommentsList({
                     >
                       {text}
                     </Text>
+                    {photoUrl && <Image source={{ uri: photoUrl }} style={styles.previewImage} resizeMode="cover" />}
                   </View>
                 </View>
               </View>
@@ -473,5 +556,25 @@ const styles = StyleSheet.create({
   previewTextLimited: {
     maxHeight: 200,
     overflow: "hidden",
+  },
+  previewRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+
+  previewIcons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+
+  iconButton: {
+    padding: 5,
+  },
+  previewImage: {
+    aspectRatio: 1,
+    height: 100,
+    borderRadius: 10,
   },
 });

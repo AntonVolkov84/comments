@@ -316,3 +316,61 @@ export async function addCommentOffline(post_id, author_id, text, file_uri = nul
     throw error;
   }
 }
+export async function syncPendingDataToServer() {
+  const db = await initLocalDb();
+
+  try {
+    const pendingComments = await db.getAllAsync(`SELECT * FROM pending_comments`);
+    const pendingPostlikes = await db.getAllAsync(`SELECT * FROM pending_postlikes`);
+    const pendingPosts = await db.getAllAsync(`SELECT * FROM pending_posts`);
+
+    const sendJson = async (url, payload) => {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        throw new Error(`Ошибка отправки в ${url}: ${response.statusText}`);
+      }
+    };
+
+    for (const comment of pendingComments) {
+      await sendJson("https://comments-server-production.up.railway.app/comments/create", comment);
+    }
+
+    for (const like of pendingPostlikes) {
+      await sendJson("https://comments-server-production.up.railway.app/post/like", like);
+    }
+
+    for (const post of pendingPosts) {
+      await sendJson("https://comments-server-production.up.railway.app/post/createpost", post);
+    }
+
+    await db.runAsync("DELETE FROM pending_comments");
+    await db.runAsync("DELETE FROM pending_postlikes");
+    await db.runAsync("DELETE FROM pending_posts");
+
+    console.log("Синхронизация прошла успешно");
+  } catch (error) {
+    console.error("Ошибка при синхронизации данных:", error);
+  }
+}
+export async function resetLocalDb() {
+  const db = await initLocalDb();
+
+  try {
+    await db.runAsync("DELETE FROM comments");
+    await db.runAsync("DELETE FROM pending_comments");
+    await db.runAsync("DELETE FROM post_likes");
+    await db.runAsync("DELETE FROM pending_postlikes");
+    await db.runAsync("DELETE FROM posts");
+    await db.runAsync("DELETE FROM pending_posts");
+    await db.runAsync("DELETE FROM users");
+    await db.runAsync("DELETE FROM pending_users");
+
+    console.log("База данных очищена успешно!");
+  } catch (error) {
+    console.error("Ошибка при очистке базы данных:", error);
+  }
+}

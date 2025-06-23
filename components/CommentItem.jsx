@@ -31,6 +31,9 @@ export default function CommentItem({ comment, level, theme }) {
           </Text>
         </View>
         <Text style={[styles.commentText, isDark && styles.textDark]}>{comment.text}</Text>
+        {comment.photo_uri && (
+          <Image source={{ uri: comment.photo_uri }} style={styles.commentImage} resizeMode="cover" />
+        )}
       </View>
     </View>
   );
@@ -96,5 +99,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#000",
     marginTop: 4,
+  },
+  commentImage: {
+    marginTop: 8,
+    aspectRatio: 1,
+    height: 180,
+    borderRadius: 8,
+    backgroundColor: "#ccc",
   },
 });

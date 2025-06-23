@@ -4,7 +4,6 @@ import { signOut } from "firebase/auth";
 import { auth, db } from "../services/firebase";
 import { getDoc, doc, updateDoc } from "firebase/firestore";
 import * as ImagePicker from "expo-image-picker";
-import * as Crypto from "expo-crypto";
 import * as ImageManipulator from "expo-image-manipulator";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
