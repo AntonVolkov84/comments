@@ -14,6 +14,18 @@ import PostModal from "./components/PostModal";
 import axios from "axios";
 import PostsList from "./components/PostList";
 import { validateHtmlText } from "./validate";
+import * as Network from "expo-network";
+import {
+  addUser,
+  addPost,
+  getPostsFromDb,
+  getLocalUserId,
+  addPostLike,
+  syncCommentToDb,
+  likePostOffline,
+  createPostOffline,
+} from "./db/localDb";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -33,17 +45,96 @@ export default function App() {
   const { t } = useTranslation();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      const currentUserEmail = currentUser.email;
-      getUserSqlId(currentUserEmail);
+    async function checkUser() {
+      const hasInternet = await Network.getNetworkStateAsync();
+      const hasRealAccess = await checkInternetAccess();
+      if (!hasInternet.isConnected || !hasInternet.isInternetReachable || !hasRealAccess) {
+        const cachedUserJSON = await AsyncStorage.getItem("cachedUser");
+        if (cachedUserJSON.length) {
+          const cachedUser = JSON.parse(cachedUserJSON);
+          setUser(cachedUser);
+          const localUserId = await getLocalUserId(cachedUser.email);
+          if (localUserId) {
+            setUserSqlId(localUserId);
+          } else {
+            console.warn("User not found in local DB");
+          }
+        } else {
+          setUser(null);
+        }
+      }
+    }
+    checkUser();
+  }, []);
+
+  const checkInternetAccess = async () => {
+    try {
+      const res = await fetch("https://clients3.google.com/generate_204");
+      return res.status === 204;
+    } catch {
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    async function syncAllData() {
+      const net = await Network.getNetworkStateAsync();
+      const isOnline = net.isConnected && net.isInternetReachable && (await checkInternetAccess());
+
+      if (!isOnline) {
+        console.log("Offline mode – loading local data...");
+        const localPosts = await getPostsFromDb();
+        setPosts(localPosts);
+        return;
+      }
+      try {
+        const usersRes = await fetch("https://comments-server-production.up.railway.app/users/getallUsers");
+        const users = await usersRes.json();
+        for (const user of users) await addUser(user);
+
+        const postsRes = await fetch("https://comments-server-production.up.railway.app/posts");
+        const posts = await postsRes.json();
+        for (const post of posts) await addPost(post);
+        setPosts(posts);
+
+        const commentsRes = await fetch("https://comments-server-production.up.railway.app/comments/getAllComments");
+        const comments = await commentsRes.json();
+        for (const comment of comments) await syncCommentToDb(comment);
+
+        const likesRes = await fetch("https://comments-server-production.up.railway.app/post/likes");
+        const likes = await likesRes.json();
+        for (const like of likes) await addPostLike(like);
+
+        console.log("Data synchronized");
+      } catch (error) {
+        console.error("Data sync failed:", error);
+      }
+    }
+    syncAllData();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      const hasRealAccess = await checkInternetAccess();
+      if (currentUser) {
+        setUser(currentUser);
+        await AsyncStorage.setItem("cachedUser", JSON.stringify(currentUser));
+        const currentUserEmail = currentUser.email;
+        if (hasRealAccess) {
+          getUserSqlId(currentUserEmail);
+        }
+      } else {
+        setUser(null);
+        await AsyncStorage.removeItem("cachedUser");
+      }
     });
-    getPosts();
+
     return () => unsubscribe();
   }, []);
   const toggleSortOrder = () => {
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
   };
+
   const sortedPosts = React.useMemo(() => {
     return [...posts].sort((a, b) => {
       let comp = 0;
@@ -55,14 +146,6 @@ export default function App() {
       return sortOrder === "asc" ? comp : -comp;
     });
   }, [posts, sortType, sortOrder]);
-  const getPosts = async () => {
-    try {
-      const postsData = await axios.get("https://comments-server-production.up.railway.app/posts");
-      setPosts(postsData.data);
-    } catch (error) {
-      console.log("getPosts", error.message);
-    }
-  };
 
   useEffect(() => {
     if (!user) return;
@@ -125,7 +208,13 @@ export default function App() {
   const handleOpenPostModal = () => {
     setModalVisible(true);
   };
-
+  const handlePostSubmitOffline = async () => {
+    console.log(userSqlId, postText);
+    const newPost = await createPostOffline(userSqlId, postText);
+    if (newPost) {
+      setPosts((prevPosts) => [newPost, ...prevPosts]);
+    }
+  };
   const handlePostSubmit = async (token) => {
     if (!token) {
       return Alert.alert(`${t("app.alertcaptcha")}`);
@@ -164,8 +253,26 @@ export default function App() {
       console.log("getUserSqlId", error.message);
     }
   };
+
   const onLike = async (item) => {
     try {
+      const net = await Network.getNetworkStateAsync();
+      const isOnline = net.isConnected && net.isInternetReachable;
+      const hasAccess = await checkInternetAccess();
+      if (!isOnline || !hasAccess) {
+        console.log("offline", item.id, userSqlId);
+        const result = await likePostOffline(item.id, userSqlId);
+        if (result.error === "User has already liked this post") {
+          Alert.alert(`${t("app.alertlike")}`);
+          setLikeVisibleForPost((prev) => ({
+            ...prev,
+            [item.id]: false,
+          }));
+        } else {
+          console.log("Liked offline:", result);
+        }
+        return;
+      }
       const response = await fetch("https://comments-server-production.up.railway.app/post/like", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -230,7 +337,7 @@ export default function App() {
       console.error(error);
     }
   };
-  if (!user || user?.emailVerified === false) {
+  if (!user || !user.emailVerified) {
     return (
       <>
         <Login onLoginSuccess={(user) => setUser(user)} />
@@ -245,6 +352,8 @@ export default function App() {
           isModalVisible={isModalVisible}
           setModalVisible={setModalVisible}
           onSubmit={handlePostSubmit}
+          handlePostSubmitOffline={handlePostSubmitOffline}
+          checkInternetAccess={checkInternetAccess}
         />
         <View style={styles.profileBtn}>
           <Button title={t("profile.title")} onPress={() => setProfileVisibility(!profileVisibility)}></Button>

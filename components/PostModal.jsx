@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Captcha from "./Captcha";
 import {
   Modal,
@@ -11,15 +11,34 @@ import {
   StyleSheet,
 } from "react-native";
 import { useTranslation } from "react-i18next";
+import * as Network from "expo-network";
 
-export default function PostModal({ isModalVisible, postText, setPostText, setModalVisible, onSubmit }) {
+export default function PostModal({
+  isModalVisible,
+  handlePostSubmitOffline,
+  postText,
+  setPostText,
+  setModalVisible,
+  onSubmit,
+  checkInternetAccess,
+}) {
   const { t } = useTranslation();
   const [showCaptcha, setShowCaptcha] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const handleCaptchaVerified = (event) => {
     const token = event.nativeEvent.data;
     onSubmit(token);
     setShowCaptcha(false);
     setModalVisible(false);
+  };
+  useEffect(() => {
+    checkNet();
+  }, []);
+  const checkNet = async () => {
+    const net = await Network.getNetworkStateAsync();
+    const res = net.isConnected && net.isInternetReachable && (await checkInternetAccess());
+    console.log(res);
+    setIsOnline(res);
   };
 
   return (
@@ -35,7 +54,18 @@ export default function PostModal({ isModalVisible, postText, setPostText, setMo
             onChangeText={setPostText}
           />
           <View style={styles.modalButtons}>
-            <TouchableOpacity onPress={() => setShowCaptcha(true)} style={styles.modalButton}>
+            <TouchableOpacity
+              onPress={
+                isOnline
+                  ? () => setShowCaptcha(true)
+                  : () => {
+                      handlePostSubmitOffline();
+                      setModalVisible(false);
+                      setPostText("");
+                    }
+              }
+              style={styles.modalButton}
+            >
               <Text style={styles.modalButtonText}>{t("postmodal.post")}</Text>
             </TouchableOpacity>
             <TouchableOpacity

@@ -13,7 +13,6 @@ const PostsList = ({ posts, theme, onLike, likeVisibleForPost, addComment }) => 
 
   const renderItem = ({ item }) => {
     const isAuthor = item.email === userEmail;
-
     return (
       <TouchableOpacity activeOpacity={0.9} onPress={() => addComment(item)}>
         <View style={[styles.postContainer, isDark && styles.postContainerDark]}>
