@@ -258,11 +258,9 @@ export async function createPostOffline(user_id, text) {
 }
 export async function getCommentsByPostIdOffline(post_id) {
   const db = await initLocalDb();
-
   if (!post_id) {
     throw new Error("post_id is required");
   }
-
   try {
     const query = `
       SELECT 
@@ -280,6 +278,41 @@ export async function getCommentsByPostIdOffline(post_id) {
     return rows;
   } catch (error) {
     console.error("Error fetching local comments:", error.message);
+    throw error;
+  }
+}
+export async function addCommentOffline(post_id, author_id, text, file_uri = null, photo_uri = null) {
+  if (!post_id || !author_id || !text) {
+    throw new Error("post_id, author_id, and text are required");
+  }
+  const db = await initLocalDb();
+  try {
+    await db.runAsync("BEGIN TRANSACTION");
+    const created_at = new Date().toISOString();
+    const tempId = -Date.now();
+    await db.runAsync(
+      `INSERT INTO comments (id, post_id, author_id, text, created_at, file_uri, photo_uri)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [tempId, post_id, author_id, text, created_at, file_uri, photo_uri]
+    );
+    await db.runAsync(
+      `INSERT INTO pending_comments (post_id, author_id, text, created_at, file_uri, photo_uri)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [post_id, author_id, text, created_at, file_uri, photo_uri]
+    );
+    await db.runAsync("COMMIT");
+    return {
+      id: tempId,
+      post_id,
+      author_id,
+      text,
+      created_at,
+      file_uri,
+      photo_uri,
+    };
+  } catch (error) {
+    await db.runAsync("ROLLBACK");
+    console.error("addCommentOffline error:", error);
     throw error;
   }
 }

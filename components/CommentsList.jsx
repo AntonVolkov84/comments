@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import CommentItem from "./CommentItem";
 import axios from "axios";
 import Captcha from "./Captcha";
+import { getCommentsByPostIdOffline, addCommentOffline } from "../db/localDb";
 
 export default function CommentsList({
   viewComments,
@@ -26,6 +27,8 @@ export default function CommentsList({
   onLike,
   likeVisibleForPost,
   userEmail,
+  isOnline,
+  userSqlId,
 }) {
   const [userData, setUserData] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -39,6 +42,9 @@ export default function CommentsList({
   const { t } = useTranslation();
 
   useEffect(() => {
+    if (!isOnline) {
+      return;
+    }
     getUser(userEmail);
   }, []);
   const getComments = async (id) => {
@@ -49,6 +55,13 @@ export default function CommentsList({
       setCommentsData(res.data);
     } catch (error) {
       console.log("getComments", error.message);
+    }
+  };
+  const addCommentsOffline = async () => {
+    const newComment = await addCommentOffline(item.id, userSqlId, text);
+    console.log(newComment);
+    if (newComment) {
+      setCommentsData((prevComments) => [newComment, ...prevComments]);
     }
   };
   const checkCaptcha = (event) => {
@@ -63,8 +76,22 @@ export default function CommentsList({
     }
   };
   useEffect(() => {
+    if (!isOnline) {
+      const fetchOfflineComments = async () => {
+        try {
+          const res = await getCommentsByPostIdOffline(item.id);
+          setCommentsData(res);
+        } catch (error) {
+          console.error("Offline getComments error:", error.message);
+        }
+      };
+      fetchOfflineComments();
+      return;
+    }
     if (!item?.id) return;
-    getComments(item.id);
+    if (isOnline) {
+      getComments(item.id);
+    }
     const socket = new WebSocket("wss://comments-server-production.up.railway.app");
     socket.onopen = () => {
       socket.send(JSON.stringify({ type: "subscribe_comments", post_id: item.id }));
@@ -158,9 +185,17 @@ export default function CommentsList({
               </View>
             )}
             <TouchableOpacity
-              onPress={() => {
-                setShowCaptcha(true);
-              }}
+              onPress={
+                isOnline
+                  ? () => {
+                      setShowCaptcha(true);
+                    }
+                  : () => {
+                      addCommentsOffline();
+                      setModalVisible(false);
+                      setText("");
+                    }
+              }
               style={styles.submitButton}
             >
               <Text style={styles.submitButtonText}>{t("send")}</Text>

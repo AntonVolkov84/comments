@@ -11,7 +11,6 @@ import {
   StyleSheet,
 } from "react-native";
 import { useTranslation } from "react-i18next";
-import * as Network from "expo-network";
 
 export default function PostModal({
   isModalVisible,
@@ -20,25 +19,15 @@ export default function PostModal({
   setPostText,
   setModalVisible,
   onSubmit,
-  checkInternetAccess,
+  isOnline,
 }) {
   const { t } = useTranslation();
   const [showCaptcha, setShowCaptcha] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
   const handleCaptchaVerified = (event) => {
     const token = event.nativeEvent.data;
     onSubmit(token);
     setShowCaptcha(false);
     setModalVisible(false);
-  };
-  useEffect(() => {
-    checkNet();
-  }, []);
-  const checkNet = async () => {
-    const net = await Network.getNetworkStateAsync();
-    const res = net.isConnected && net.isInternetReachable && (await checkInternetAccess());
-    console.log(res);
-    setIsOnline(res);
   };
 
   return (

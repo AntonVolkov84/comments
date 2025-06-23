@@ -40,11 +40,13 @@ export default function App() {
   const [sortOrder, setSortOrder] = useState("desc");
   const [likeVisibleForPost, setLikeVisibleForPost] = useState({});
   const [viewComments, setViewComments] = useState({});
+  const [isOnline, setIsOnLine] = useState(true);
   const [commentsVisible, setCommentsVisible] = useState(false);
   const [ws, setWs] = useState(null);
   const { t } = useTranslation();
 
   useEffect(() => {
+    checkNet();
     async function checkUser() {
       const hasInternet = await Network.getNetworkStateAsync();
       const hasRealAccess = await checkInternetAccess();
@@ -67,6 +69,11 @@ export default function App() {
     checkUser();
   }, []);
 
+  const checkNet = async () => {
+    const net = await Network.getNetworkStateAsync();
+    const res = net.isConnected && net.isInternetReachable && (await checkInternetAccess());
+    setIsOnLine(res);
+  };
   const checkInternetAccess = async () => {
     try {
       const res = await fetch("https://clients3.google.com/generate_204");
@@ -79,9 +86,8 @@ export default function App() {
   useEffect(() => {
     async function syncAllData() {
       const net = await Network.getNetworkStateAsync();
-      const isOnline = net.isConnected && net.isInternetReachable && (await checkInternetAccess());
-
-      if (!isOnline) {
+      const online = net.isConnected && net.isInternetReachable && (await checkInternetAccess());
+      if (!online) {
         console.log("Offline mode – loading local data...");
         const localPosts = await getPostsFromDb();
         setPosts(localPosts);
@@ -115,12 +121,11 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      const hasRealAccess = await checkInternetAccess();
       if (currentUser) {
         setUser(currentUser);
         await AsyncStorage.setItem("cachedUser", JSON.stringify(currentUser));
         const currentUserEmail = currentUser.email;
-        if (hasRealAccess) {
+        if (!isOnline) {
           getUserSqlId(currentUserEmail);
         }
       } else {
@@ -209,7 +214,6 @@ export default function App() {
     setModalVisible(true);
   };
   const handlePostSubmitOffline = async () => {
-    console.log(userSqlId, postText);
     const newPost = await createPostOffline(userSqlId, postText);
     if (newPost) {
       setPosts((prevPosts) => [newPost, ...prevPosts]);
@@ -256,10 +260,7 @@ export default function App() {
 
   const onLike = async (item) => {
     try {
-      const net = await Network.getNetworkStateAsync();
-      const isOnline = net.isConnected && net.isInternetReachable;
-      const hasAccess = await checkInternetAccess();
-      if (!isOnline || !hasAccess) {
+      if (!isOnline) {
         console.log("offline", item.id, userSqlId);
         const result = await likePostOffline(item.id, userSqlId);
         if (result.error === "User has already liked this post") {
@@ -326,6 +327,7 @@ export default function App() {
     setViewComments(item);
     setCommentsVisible(true);
   };
+
   const fetchWeather = async (lat, lon) => {
     try {
       const response = await fetch(
@@ -353,7 +355,7 @@ export default function App() {
           setModalVisible={setModalVisible}
           onSubmit={handlePostSubmit}
           handlePostSubmitOffline={handlePostSubmitOffline}
-          checkInternetAccess={checkInternetAccess}
+          isOnline={isOnline}
         />
         <View style={styles.profileBtn}>
           <Button title={t("profile.title")} onPress={() => setProfileVisibility(!profileVisibility)}></Button>
@@ -375,6 +377,8 @@ export default function App() {
               onLike={onLike}
               likeVisibleForPost={likeVisibleForPost}
               userEmail={user.email}
+              isOnline={isOnline}
+              userSqlId={userSqlId}
             />
           ) : (
             <PostsList
