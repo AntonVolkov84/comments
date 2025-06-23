@@ -21,6 +21,7 @@ import { getCommentsByPostIdOffline, addCommentOffline } from "../db/localDb";
 import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
+import * as DocumentPicker from "expo-document-picker";
 
 export default function CommentsList({
   viewComments,
@@ -39,18 +40,60 @@ export default function CommentsList({
   const [showPreview, setShowPreview] = useState(false);
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [photoUrl, setPhotoUrl] = useState(null);
+  const [fileUrl, setFileUrl] = useState(null);
   const [commentsData, setCommentsData] = useState([]);
   const isDark = theme === "dark";
   const item = viewComments;
   const isAuthor = item.email === userEmail;
   const { t } = useTranslation();
-  console.log(commentsData);
+
   useEffect(() => {
     if (!isOnline) {
       return;
     }
     getUser(userEmail);
   }, []);
+  const pickTextFile = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: "text/plain",
+    });
+    if (result.type === "success") {
+      if (result.size > 100 * 1024) {
+        alert("Файл слишком большой. Максимальный размер — 100 КБ.");
+        return;
+      }
+      const uploaded = await uploadTextFileToCloudinary(result.uri);
+      if (uploaded) {
+        return uploaded;
+      }
+    }
+  };
+  const uploadTextFileToCloudinary = async (fileUri) => {
+    const data = new FormData();
+    data.append("file", {
+      uri: fileUri,
+      type: "text/plain",
+      name: "upload.txt",
+    });
+    data.append("upload_preset", "mobile_unsigned");
+    data.append("resource_type", "raw");
+    try {
+      const response = await fetch("https://api.cloudinary.com/v1_1/dmmixwibz/raw/upload", {
+        method: "POST",
+        body: data,
+      });
+      const result = await response.json();
+      if (response.ok) {
+        return result.secure_url;
+      } else {
+        console.error("Cloudinary upload error:", result);
+        return null;
+      }
+    } catch (error) {
+      console.error("Upload failed:", error);
+      return null;
+    }
+  };
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -87,6 +130,12 @@ export default function CommentsList({
     const imageUrl = await pickImage();
     if (imageUrl) {
       setPhotoUrl(imageUrl);
+    }
+  };
+  const handlePickFile = async () => {
+    const imageUrl = await pickTextFile();
+    if (imageUrl) {
+      setFileUrl(imageUrl);
     }
   };
   const uploadImageToCloudinary = async (imageUri) => {
@@ -231,7 +280,7 @@ export default function CommentsList({
                   <AntDesign name="picture" size={20} color={isDark ? "#fff" : "#000"} />
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => console.log("File upload pressed")} style={styles.iconButton}>
+                <TouchableOpacity onPress={() => handlePickFile()} style={styles.iconButton}>
                   <Feather name="paperclip" size={20} color={isDark ? "#fff" : "#000"} />
                 </TouchableOpacity>
               </View>
