@@ -4,7 +4,7 @@
     "slug": "comments-app",
     "version": "1.0.1",
     "orientation": "default",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/supericon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -18,13 +18,13 @@
     "android": {
       "package": "com.orders.commentsapp",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/supericon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/supericon.png"
     },
     "plugins": [
       "expo-sqlite",

@@ -6,6 +6,10 @@
   "comments": "Comments",
   "send": "Send",
   "close": "Close",
+  "offline": "Offline",
+  "download": "Download",
+  "goback": "Back",
+  "forward": "Forward",
   "profile": {
     "title": "Profile",
     "nikname": "Nik",
@@ -31,7 +35,14 @@
     "alertnotext": "No text to post",
     "alertlike": "Hey! One like per person! ❤️\nWe're hiding the button - don't be naughty"
   },
+  "commentsitem": {
+    "alertinsofpermission": "Allow access to save the file",
+    "alertfileupload": "File downloaded",
+    "alertuploaderror": "Downloading error"
+  },
   "commentslist": {
+    "alertlargefile": "File is to large! Max 100kb",
+    "alertlargephoto": "File of photo is to large! Max 2mb",
     "placeholder": "Type your comment",
     "hidepreview": "Hide preview",
     "preview": "Preview"

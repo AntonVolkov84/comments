@@ -272,7 +272,7 @@ export async function getCommentsByPostIdOffline(post_id) {
       FROM comments
       JOIN users ON comments.author_id = users.id
       WHERE comments.post_id = ?
-      ORDER BY comments.created_at DESC
+      ORDER BY comments.created_at ASC
     `;
     const rows = await db.getAllAsync(query, [post_id]);
     return rows;

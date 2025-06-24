@@ -12,7 +12,7 @@ import {
   Alert,
 } from "react-native";
 import { AntDesign } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import CommentItem from "./CommentItem";
 import axios from "axios";
@@ -22,6 +22,7 @@ import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as DocumentPicker from "expo-document-picker";
+import Icon from "react-native-vector-icons/MaterialIcons";
 
 export default function CommentsList({
   viewComments,
@@ -42,27 +43,44 @@ export default function CommentsList({
   const [photoUrl, setPhotoUrl] = useState(null);
   const [fileUrl, setFileUrl] = useState(null);
   const [commentsData, setCommentsData] = useState([]);
+  const [paginationInfo, setPaginationInfo] = useState([]);
+  const [page, setPage] = useState(1);
+  const [allOfflineComments, setAllOfflineComments] = useState([]);
+  const [offlinePage, setOfflinePage] = useState(1);
+  const pageSize = 25;
+  const totalOfflinePages = Math.ceil(allOfflineComments.length / pageSize);
   const isDark = theme === "dark";
   const item = viewComments;
   const isAuthor = item.email === userEmail;
   const { t } = useTranslation();
 
   useEffect(() => {
+    if (!isOnline || !item?.id) return;
+    getComments(item.id, page);
+  }, [page, isOnline, item?.id]);
+  useEffect(() => {
     if (!isOnline) {
       return;
     }
     getUser(userEmail);
   }, []);
+  const currentOfflineComments = useMemo(() => {
+    const start = (offlinePage - 1) * pageSize;
+    const end = start + pageSize;
+    return allOfflineComments.slice(start, end);
+  }, [allOfflineComments, offlinePage]);
   const pickTextFile = async () => {
     const result = await DocumentPicker.getDocumentAsync({
       type: "text/plain",
     });
-    if (result.type === "success") {
-      if (result.size > 100 * 1024) {
-        alert("Файл слишком большой. Максимальный размер — 100 КБ.");
+    if (!result.canceled && result.assets[0]) {
+      const file = result.assets[0];
+      if (file.size > 100 * 1024) {
+        Alert.alert(`${t("commentslist.alertlargefile")}`);
         return;
       }
-      const uploaded = await uploadTextFileToCloudinary(result.uri);
+      const uri = result.assets[0].uri;
+      const uploaded = await uploadTextFileToCloudinary(uri);
       if (uploaded) {
         return uploaded;
       }
@@ -108,7 +126,7 @@ export default function CommentsList({
         const blob = await fileInfo.blob();
         const maxFileSize = 2 * 1024 * 1024;
         if (blob.size > maxFileSize) {
-          alert("Файл слишком большой. Максимальный размер — 2 МБ.");
+          Alert.alert(`${t("commentslist.alertlargephoto")}`);
           return;
         }
         const resizedImage = await ImageManipulator.manipulateAsync(
@@ -164,19 +182,45 @@ export default function CommentsList({
       return null;
     }
   };
-  const getComments = async (id) => {
+  const handleNextPage = () => {
+    if (paginationInfo?.page < paginationInfo?.totalPages) {
+      setPage((prev) => prev + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (paginationInfo?.page > 1) {
+      setPage((prev) => prev - 1);
+    }
+  };
+  const handleNextPageOffline = () => {
+    if (offlinePage < totalOfflinePages) {
+      setOfflinePage((prev) => prev + 1);
+    }
+  };
+
+  const handlePrevPageOffline = () => {
+    console.log("log page", offlinePage);
+    if (offlinePage > 1) {
+      setOfflinePage((prev) => prev - 1);
+    }
+  };
+  const getComments = async (id, pageNumber = 1) => {
     try {
-      const res = await axios.post("https://comments-server-production.up.railway.app/commeby-postnts/create", {
-        post_id: id,
-      });
-      setCommentsData(res.data);
+      const res = await axios.post(
+        `https://comments-server-production.up.railway.app/commeby-postnts/create?page=${pageNumber}`,
+        {
+          post_id: id,
+        }
+      );
+      setCommentsData(res.data.data);
+      setPaginationInfo(res.data.pagination);
     } catch (error) {
       console.log("getComments", error.message);
     }
   };
   const addCommentsOffline = async () => {
     const newComment = await addCommentOffline(item.id, userSqlId, text);
-    console.log(newComment);
     if (newComment) {
       setCommentsData((prevComments) => [newComment, ...prevComments]);
     }
@@ -187,10 +231,11 @@ export default function CommentsList({
       return Alert.alert(`${t("app.alertcaptcha")}`);
     } else {
       setModalVisible(false);
-      onCreateComment(text, item.id, photoUrl);
+      onCreateComment(text, item.id, photoUrl, fileUrl);
       setText("");
       setShowCaptcha(false);
       setPhotoUrl(null);
+      setFileUrl(null);
     }
   };
   useEffect(() => {
@@ -198,7 +243,8 @@ export default function CommentsList({
       const fetchOfflineComments = async () => {
         try {
           const res = await getCommentsByPostIdOffline(item.id);
-          setCommentsData(res);
+          setAllOfflineComments(res);
+          setOfflinePage(1);
         } catch (error) {
           console.error("Offline getComments error:", error.message);
         }
@@ -219,7 +265,12 @@ export default function CommentsList({
         const message = JSON.parse(event.data);
         if (message.type === "new_comment" && message.data.post_id === item.id) {
           const comment = message.data;
-          setCommentsData((prev) => [...(prev || []), comment]);
+          setCommentsData((prev) => {
+            const alreadyExists = prev?.some((c) => c.id === comment.id);
+            if (alreadyExists) return prev;
+            const newList = [...(prev || []), comment];
+            return newList.slice(0, 25);
+          });
         }
       } catch (err) {
         console.log("WS comment parse error", err);
@@ -243,7 +294,7 @@ export default function CommentsList({
         .then((res) => res.json())
         .then((data) => setUserData(data));
     } catch (error) {
-      "getUser", error.message;
+      console.log("getUser", error.message);
     }
   };
 
@@ -312,6 +363,11 @@ export default function CommentsList({
                       {text}
                     </Text>
                     {photoUrl && <Image source={{ uri: photoUrl }} style={styles.previewImage} resizeMode="cover" />}
+                    {fileUrl && (
+                      <View style={{ alignItems: "center", marginBottom: 10 }}>
+                        <Icon name="insert-drive-file" size={40} color="#666" />
+                      </View>
+                    )}
                   </View>
                 </View>
               </View>
@@ -393,12 +449,39 @@ export default function CommentsList({
         </View>
       </View>
       <FlatList
-        data={commentsData}
+        data={isOnline ? commentsData : currentOfflineComments}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item, index }) => <CommentItem theme={theme} comment={item} level={index} />}
+        renderItem={({ item, index }) => <CommentItem isOnline={isOnline} theme={theme} comment={item} level={index} />}
         contentContainerStyle={{ paddingBottom: 20 }}
-        style={{ flex: 1 }}
+        style={{ flex: 1, maxHeight: 500 }}
       />
+      <View style={styles.paginationBlock}>
+        <TouchableOpacity
+          disabled={isOnline ? page === 1 : offlinePage === 1}
+          onPress={() => (isOnline ? handlePrevPage() : handlePrevPageOffline())}
+          style={[
+            styles.pageButton,
+            isOnline ? page === 1 && styles.pageButtonDisabled : offlinePage === 1 && styles.pageButtonDisabled,
+          ]}
+        >
+          <Text style={styles.pageButtonText}>{t("goback")}</Text>
+        </TouchableOpacity>
+        <Text
+          style={[{ alignSelf: "center", marginHorizontal: 10 }, isDark && styles.textDark]}
+        >{`Страница ${page} из ${paginationInfo?.totalPages || totalOfflinePages || "?"}`}</Text>
+        <TouchableOpacity
+          disabled={isOnline ? !paginationInfo?.hasMore : offlinePage === totalOfflinePages}
+          onPress={() => (isOnline ? handleNextPage() : handleNextPageOffline())}
+          style={[
+            styles.pageButton,
+            isOnline
+              ? !paginationInfo?.hasMore && styles.pageButtonDisabled
+              : offlinePage === totalOfflinePages && styles.pageButtonDisabled,
+          ]}
+        >
+          <Text style={styles.pageButtonText}>{t("forward")}</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -625,5 +708,19 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     height: 100,
     borderRadius: 10,
+  },
+  paginationBlock: { flexDirection: "row", justifyContent: "center" },
+  pageButton: {
+    backgroundColor: "#1976d2",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  pageButtonDisabled: {
+    backgroundColor: "#aaa",
+  },
+  pageButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });
